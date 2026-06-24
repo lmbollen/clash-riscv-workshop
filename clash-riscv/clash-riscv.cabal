@@ -124,6 +124,7 @@ library
     Workshop.Peripheral
     Workshop.Utils
     Workshop.Memory
+    Workshop.Soc
     Workshop.MemoryMaps
     Workshop.Firmware
   other-modules:
