@@ -4,19 +4,22 @@ name = "hal"
 version = "0.1.0"
 edition = "2021"
 
-# This crate will hold both layers of the firmware's device access:
+# This one crate holds both layers of the firmware's device access:
 #
 #   * the PAC (Peripheral Access Code) — the `hals` module, *generated* from the
 #     SoC memory map by `build.rs`. Low-level, typed, volatile register access.
 #     You never edit it; you regenerate it.
-#   * the HAL (Hardware Abstraction Layer) — hand-written driver methods you add on
-#     top (step 4 of the workshop), directly onto the generated device types.
+#   * the HAL (Hardware Abstraction Layer) — hand-written driver methods added
+#     next to it, directly onto the generated device types (they are local to this
+#     crate), giving them an ergonomic, safe API.
 #
 # Keeping them in one package means the PAC and its `DeviceInstances` are built
 # (and can be inspected) on their own, without any program depending on them.
 [dependencies]
 # Runtime types the generated accessors are expressed in (BitVector, ...).
 clash-bindings = { git = "https://github.com/QBayLogic/clash-protocols-memmap", rev = "ab96b206566f23889549db5c6159ccb1bcfa2d13", package = "clash-bindings" }
+# Lightweight formatting the serial driver plugs into (uwriteln!).
+ufmt = "0.2.0"
 
 [build-dependencies]
 # Turns the memory-map JSON into the generated PAC (the `hals` module).

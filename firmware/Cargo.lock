@@ -57,6 +57,7 @@ dependencies = [
  "clash-bindings",
  "memorymap-compiler",
  "memorymap-compiler-rust",
+ "ufmt",
 ]
 
 [[package]]
