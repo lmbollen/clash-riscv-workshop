@@ -182,3 +182,23 @@ test-suite test-library
     tasty >= 1.2 && < 1.6,
     tasty-hedgehog,
     tasty-th
+
+-- Runs the hello-world firmware on the SoC in simulation and prints what the CPU
+-- writes out the SerialBytes peripheral. Requires the firmware ELF to have been
+-- built first (`cd firmware && cargo build --release`). Run with:
+-- `cabal run hello-world-sim`.
+executable sim
+  import: common-options
+  default-language: Haskell2010
+  hs-source-dirs: bin
+  ghc-options: -threaded
+  main-is: Sim.hs
+  build-depends:
+    base,
+    clash-riscv,
+    clash-prelude,
+    clash-bitpackc,
+    clash-protocols,
+    clash-protocols-memmap,
+    clash-vexriscv,
+    filepath
