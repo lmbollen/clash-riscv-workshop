@@ -16,6 +16,7 @@ import Language.Haskell.TH (reportError, runIO)
 import System.Directory (createDirectoryIfMissing, removePathForcibly)
 import System.FilePath
 
+import qualified Workshop.Soc as Soc
 import qualified Data.ByteString.Lazy as BS
 import qualified Protocols.MemoryMap.Json as Json
 
@@ -26,7 +27,8 @@ $( do
      -- Add new memory maps here  --
      -------------------------------
      let memoryMaps =
-           [] :: [(String, MemoryMap)]
+           [ ("Soc", Soc.memoryMap)
+           ]
 
      memMapDir <- runIO $ do
        root <- findParentContaining "cabal.project"
