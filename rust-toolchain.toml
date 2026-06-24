@@ -1,0 +1,8 @@
+# RISC-V firmware toolchain for the workshop.
+#
+# Nightly is required for `-Z build-std` (we build `core`/`panic_abort` for the
+# bare-metal riscv32imc target ourselves, since there is no precompiled std).
+[toolchain]
+channel = "nightly-2026-04-16"
+components = ["rust-src", "rustfmt", "clippy"]
+targets = ["riscv32imc-unknown-none-elf", "x86_64-unknown-linux-gnu"]

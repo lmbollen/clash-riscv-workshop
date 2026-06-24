@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: CC0-1.0
+
+# Bare-metal RISC-V firmware for the workshop SoC.
+[build]
+target = "riscv32imc-unknown-none-elf"
+target-dir = "../_build/cargo"
+
+# No precompiled `core` for this target, so build it (and panic_abort) ourselves.
+[unstable]
+build-std = ["core", "panic_abort"]
