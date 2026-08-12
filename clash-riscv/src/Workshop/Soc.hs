@@ -53,3 +53,4 @@ soc dumpVcd =
 -- | The memory map of 'soc', used to generate documentation / HAL code.
 memoryMap :: MemoryMap
 memoryMap = getMMAny (soc NoDumpVcd)
+

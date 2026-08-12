@@ -45,7 +45,7 @@
 
         # Options for `nix run`
         # Select the toplevel module
-        top-module = "Workshop.Project";
+        top-module = "Workshop.Top";
         # Output VHDL or Verilog
         hdl = "verilog";
       in
@@ -67,6 +67,10 @@
               # dependencies declared in cabal.project.
               pkgs.git
               pkgs.cacert
+
+              # `nix run` uses this to register the hand-written constraints in
+              # the Clash manifest.
+              pkgs.jq
 
               # Build-time toolchain for clash-vexriscv (used by clash-cpus): it
               # runs SpinalHDL (Scala) to emit Verilog, then verilates it and
@@ -107,10 +111,27 @@
                 exit 1
               fi
 
-              cabal build --write-ghc-environment-files=never
+              cabal build all --write-ghc-environment-files=never
               cabal run clash ${top-module} -- --${hdl}
               echo "Removing" .ghc.environment.*
               rm -f .ghc.environment.*
+
+              # Clash emits the clock constraint (topEntity.sdc) but knows
+              # nothing about the JTAG clock or which paths are asynchronous.
+              # Copy our hand-written constraints in beside it and list them in
+              # the manifest, which is what `clash::readXdc` reads -- a file
+              # merely sitting in the directory is ignored.
+              outDir=${hdl}/${top-module}.topEntity
+              xdc=clash-riscv/data/constraints/cdc.xdc
+              echo "Adding constraints" "$xdc"
+              cp "$xdc" "$outDir/"
+              sha=$(sha256sum "$outDir/cdc.xdc" | cut -d' ' -f1)
+              manifest=$outDir/clash-manifest.json
+              tmp=$(mktemp)
+              jq --arg s "$sha" \
+                '.files += [{name: "cdc.xdc", sha256: $s}]' \
+                "$manifest" > "$tmp"
+              mv "$tmp" "$manifest"
             '').outPath;
           };
         }

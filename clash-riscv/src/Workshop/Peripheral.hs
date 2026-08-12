@@ -5,6 +5,7 @@ module Workshop.Peripheral where
 import Clash.Prelude
 
 import Clash.Class.BitPackC (ByteOrder)
+import Clash.Cores.Uart (ValidBaud, uart)
 
 import Data.Maybe
 import GHC.Stack (HasCallStack)
@@ -55,3 +56,36 @@ the receiving circuit does not respect the `Df` protocol.
 -}
 unsafeFromDf :: Circuit (Df dom a, CSignal dom Ack) (CSignal dom (Maybe a))
 unsafeFromDf = Circuit $ \((dfFwd, dfBwd), _) -> ((dfBwd, ()), dfFwd)
+
+{- | Constructs a `Df` from a `CSignal` of `Maybe`s.
+This function is unsafe, because the producing circuit gets no backpressure: a
+value offered while the receiver is not ready is silently dropped.
+-}
+unsafeToDf :: Circuit (CSignal dom (Maybe a)) (Df dom a)
+unsafeToDf = Circuit $ \(maybes, _ack) -> ((), maybes)
+
+{- | The UART core from @clash-cores@ dressed up as a 'Circuit': it serialises
+bytes from the 'Df' input onto the transmit line, and deserialises the receive
+line back into bytes.
+
+The received bytes come out as a plain 'CSignal' rather than a 'Df', because the
+line has no way to be told to wait: a byte is presented for a single cycle and
+then it is gone. Buffer it (see 'Workshop.Top.socUart') if the consumer cannot
+keep up.
+
+This is @Bittide.Wishbone.uartDf@ from the bittide-hardware project.
+-}
+uartDf ::
+  (HiddenClockResetEnable dom, ValidBaud dom baud) =>
+  SNat baud ->
+  {- | Left side of circuit: byte to send, receive line
+  Right side of circuit: received byte, transmit line
+  -}
+  Circuit
+    (Df dom (BitVector 8), CSignal dom Bit)
+    (CSignal dom (Maybe (BitVector 8)), CSignal dom Bit)
+uartDf baud = Circuit go
+ where
+  go ((request, rxBit), _) = ((Ack <$> ack, ()), (received, txBit))
+   where
+    (received, txBit, ack) = uart baud rxBit request

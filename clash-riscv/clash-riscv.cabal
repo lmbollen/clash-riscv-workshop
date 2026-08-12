@@ -5,6 +5,11 @@ license:             BSD-2-Clause
 author:              John Smith <john@example.com>
 maintainer:          John Smith <john@example.com>
 
+-- Hand-written constraints for the top entity. Clash generates the clock
+-- constraint itself; these cover what it cannot know about (see the file).
+data-files:
+  data/constraints/*.xdc
+
 common common-options
   default-extensions:
     BangPatterns
@@ -101,6 +106,7 @@ common common-options
     clash-protocols-base,
     clash-protocols,
     clash-protocols-memmap,
+    clash-cores,
     clash-cpus,
     clash-vexriscv,
     constraints,
@@ -125,6 +131,7 @@ library
     Workshop.Utils
     Workshop.Memory
     Workshop.Soc
+    Workshop.Top
     Workshop.MemoryMaps
     Workshop.Firmware
   other-modules:
