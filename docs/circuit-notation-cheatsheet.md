@@ -1,7 +1,7 @@
 # Circuit notation cheatsheet
 
 A quick reference for `clash-protocols`' **circuit notation** — the little arrow
-DSL you see in files like [`Workshop/Peripheral.hs`](../clash-riscv/src/Workshop/Peripheral.hs)
+DSL you see in files like [`Workshop/Peripheral/Serial.hs`](../clash-riscv/src/Workshop/Peripheral/Serial.hs)
 and [`Workshop/Cpu.hs`](../clash-riscv/src/Workshop/Cpu.hs).
 
 Circuit notation lets you wire protocol-carrying components together as if you
@@ -319,14 +319,14 @@ So the rule of thumb:
 | `c -< (…, Fwd s)`         | **construct**: wrap plain signal `s` into a protocol port       |
 
 This is exactly the pair used to bridge into and out of `CSignal` around the
-`unsafeFromDf` helper in [`Workshop/Peripheral.hs`](../clash-riscv/src/Workshop/Peripheral.hs).
+`unsafeFromDf` helper in [`Workshop/Peripheral/Serial.hs`](../clash-riscv/src/Workshop/Peripheral/Serial.hs).
 
 ---
 
 ## 8. A complete worked example
 
 Every feature above appears in `serialBytes` — a good template to read whole
-(from [`Workshop/Peripheral.hs`](../clash-riscv/src/Workshop/Peripheral.hs)):
+(from [`Workshop/Peripheral/Serial.hs`](../clash-riscv/src/Workshop/Peripheral/Serial.hs)):
 
 ```haskell
 serialBytes ::

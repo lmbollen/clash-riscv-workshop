@@ -1,5 +1,7 @@
 {
   "files.watcherExclude": {
     "**/target/**": true
-  }
+  },
+  "clash-toolkit.outOfContext": false,
+  "clash-toolkit.synthesisTarget": "ice40"
 }

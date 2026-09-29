@@ -72,6 +72,16 @@
               # the Clash manifest.
               pkgs.jq
 
+              # FPGA toolchain for the OrangeCrab r0.2.1 (ECP5-85F). The
+              # clash-starters template expects these on PATH from OSS CAD
+              # Suite; we pin them through nixpkgs instead. `make` drives them,
+              # see the Makefile. (gnumake is already listed above.)
+              pkgs.yosys              # RTL synthesis      (synth_ecp5)
+              pkgs.nextpnr            # place & route      (nextpnr-ecp5)
+              pkgs.trellis            # bitstream packing  (ecppack)
+              pkgs.openfpgaloader     # programming over the FT232H JTAG probe
+              pkgs.picocom            # reading the SoC's serial output
+
               # Build-time toolchain for clash-vexriscv (used by clash-cpus): it
               # runs SpinalHDL (Scala) to emit Verilog, then verilates it and
               # builds an FFI library with make + a C compiler.

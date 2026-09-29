@@ -5,11 +5,6 @@ license:             BSD-2-Clause
 author:              John Smith <john@example.com>
 maintainer:          John Smith <john@example.com>
 
--- Hand-written constraints for the top entity. Clash generates the clock
--- constraint itself; these cover what it cannot know about (see the file).
-data-files:
-  data/constraints/*.xdc
-
 common common-options
   default-extensions:
     BangPatterns
@@ -124,16 +119,32 @@ common common-options
 library
   import: common-options
   hs-source-dirs: src
+  -- Only the library needs this, for the ECP5 PLL's blackbox template. Keeping it out
+  -- of `common-options` stops it being dragged into the doctests, both sims and the
+  -- test suite for nothing.
+  build-depends: string-interpolate
   exposed-modules:
-    Workshop.Cpu
-    Workshop.Project
-    Workshop.Peripheral
-    Workshop.Utils
-    Workshop.Memory
-    Workshop.Soc
+    -- The design, outermost first.
     Workshop.Top
-    Workshop.MemoryMaps
+    Workshop.Soc
+
+    -- One module or subtree per peripheral, each self-contained: the Wishbone
+    -- device, its registers, and whatever pin-level adapter it needs.
+    Workshop.Peripheral.Serial
+    Workshop.Peripheral.Encoder
+    Workshop.Peripheral.Ethernet
+    Workshop.Peripheral.Ethernet.Rmii
+
+    -- Shared infrastructure.
+    Workshop.Cpu
+    Workshop.Memory
+    Workshop.Clocks
     Workshop.Firmware
+    Workshop.MemoryMaps
+    Workshop.Utils
+
+    -- Workshop exercise, not part of the SoC.
+    Workshop.Project
   other-modules:
     -- Vendored, self-contained reusable Clash helpers:
     DoubleBufferedRam
@@ -180,6 +191,7 @@ test-suite test-library
   ghc-options: -threaded
   main-is: unittests.hs
   other-modules:
+    Tests.Workshop.Peripheral.Encoder
     Tests.Workshop.Project
   build-depends:
     clash-riscv,
@@ -209,3 +221,22 @@ executable sim
     clash-protocols-memmap,
     clash-vexriscv,
     filepath
+
+-- Same idea as 'sim', but runs the firmware image that is compiled *into* the
+-- design (and therefore into the bitstream) rather than one loaded at runtime.
+-- Guards the byte-lane splitting that the FPGA build depends on. Run with
+-- `cabal run sim-baked`.
+executable sim-baked
+  import: common-options
+  default-language: Haskell2010
+  hs-source-dirs: bin
+  ghc-options: -threaded
+  main-is: SimBaked.hs
+  build-depends:
+    base,
+    clash-riscv,
+    clash-prelude,
+    clash-bitpackc,
+    clash-protocols,
+    clash-protocols-memmap,
+    clash-vexriscv

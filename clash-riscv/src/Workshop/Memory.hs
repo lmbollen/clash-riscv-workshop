@@ -47,7 +47,7 @@ wbStorage ::
   Circuit (ToConstBwd Mm.Mm, Wishbone dom 'Standard aw nBytes) ()
 wbStorage memoryName SNat initContent =
   circuit $ \wbMm -> do
-    [wb0] <- deviceWbI (deviceConfig memoryName){registered = False} -< wbMm
+    [wb0] <- deviceWbI (deviceConfig memoryName){registered = True} -< wbMm
     reqresp <- addressableBytesWb @depth regConfig -< wb0
     (reads, writes0) <- ReqResp.partitionEithers -< reqresp
     writes1 <- ReqResp.requests <| ReqResp.dropResponse 0 -< writes0

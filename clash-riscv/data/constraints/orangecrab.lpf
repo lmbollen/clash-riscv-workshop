@@ -1,0 +1,190 @@
+# Pin constraints for Workshop.Top.topEntity on an OrangeCrab r0.2.1 (ECP5-85F)
+# with the OrangeCrab Pmod/Debug Expander board.
+#
+# Ball assignments are taken from `orangecrab.pcf` in the clash-starters
+# OrangeCrab template. Despite the .pcf name used there, the syntax is Lattice
+# LPF and it is passed to nextpnr-ecp5 via --lpf; this file keeps the .lpf
+# extension to match its contents.
+#
+# The port names on the left must match the names Clash emits, which come from
+# the `"NAME" ::: T` annotations on `topEntity` (and, for JTAG, the field names
+# inside VexRiscv's JtagIn/JtagOut records).
+
+# 48 MHz oscillator. Declaring the frequency is what lets nextpnr report whether
+# the design actually closes timing at speed.
+LOCATE COMP "CLK" SITE "A9";
+IOBUF  PORT "CLK" IO_TYPE=LVCMOS33;
+FREQUENCY PORT "CLK" 48.0 MHz;
+
+# The board's user button, which restarts the SoC so it greets us again.
+#
+# Two things to know about J17. It sits in the 1.35 V DDR3 bank, so it is
+# SSTL135_I and NOT LVCMOS33 -- do not "fix" that. And it is active low: the
+# button shorts the pin to ground, so unpressed must read high. PULLMODE=UP makes
+# that independent of whether the board fits an external pull-up; if the pin ever
+# read low the SoC would sit in reset and go silent, with nothing to say why.
+#
+# The design still resets itself at power-on, so the button is a convenience
+# rather than something the bring-up depends on (Workshop.Top.resetController).
+LOCATE COMP "BTN" SITE "J17";
+IOBUF  PORT "BTN" IO_TYPE=SSTL135_I;
+IOBUF  PORT "BTN" PULLMODE=UP;
+
+###############################################################################
+# UART -- PMOD 1, a Digilent Pmod USBUART on a 1x6 header
+#
+# PMOD1 breaks out only four FPGA pins, PMOD1_4..7; there is no PMOD1_0..3.
+# On the 1x6 header those four are the connector's data positions 1..4, and the
+# Pmod USBUART puts RTS, RXD, TXD, CTS there in that order.
+#
+# The catch is that Digilent names those signals from the *Pmod's* point of
+# view, not the host's: the Pmod receives on RXD and transmits on TXD. So the
+# FPGA drives RXD and listens on TXD -- the opposite of what the names suggest.
+#
+#   pin 1  PMOD1_4  B8  RTS  Pmod output, unused
+#   pin 2  PMOD1_5  C8  RXD  Pmod input   <- UART_TX, driven by the FPGA
+#   pin 3  PMOD1_6  A8  TXD  Pmod output  -> UART_RX, read by the FPGA
+#   pin 4  PMOD1_7  H2  CTS  Pmod input,  unused
+#
+# The Pmod's JP1 jumper needs to be on LCL, since the OrangeCrab powers the
+# header itself.
+###############################################################################
+
+LOCATE COMP "UART_TX" SITE "C8";
+IOBUF  PORT "UART_TX" IO_TYPE=LVCMOS33;
+
+# An idle UART line sits high, so pull up rather than down: with PULLMODE=DOWN a
+# disconnected RX reads as a permanent start bit and the receiver sees garbage.
+LOCATE COMP "UART_RX" SITE "A8";
+IOBUF  PORT "UART_RX" IO_TYPE=LVCMOS33;
+IOBUF  PORT "UART_RX" PULLMODE=UP;
+
+###############################################################################
+# CPU debug JTAG -- PMOD 3
+#
+# This is the *CPU's* debug port, not the FPGA's configuration JTAG (that one
+# has its own pads and is how the bitstream gets loaded). It cannot share PMOD1
+# because only four pins are broken out there and the UART needs two of them.
+#
+# The inputs are pulled DOWN so that with nothing plugged in TCK stays parked
+# low. That matters: a floating TCK would clock VexRiscv's debug module with
+# noise, and the debug module can assert ndmreset, which would hold the CPU in
+# reset and stop it ever printing.
+###############################################################################
+
+LOCATE COMP "JTAG_TCK" SITE "L4";
+IOBUF  PORT "JTAG_TCK" IO_TYPE=LVCMOS33;
+IOBUF  PORT "JTAG_TCK" PULLMODE=DOWN;
+
+LOCATE COMP "JTAG_TMS" SITE "N4";
+IOBUF  PORT "JTAG_TMS" IO_TYPE=LVCMOS33;
+IOBUF  PORT "JTAG_TMS" PULLMODE=DOWN;
+
+LOCATE COMP "JTAG_TDI" SITE "G4";
+IOBUF  PORT "JTAG_TDI" IO_TYPE=LVCMOS33;
+IOBUF  PORT "JTAG_TDI" PULLMODE=DOWN;
+
+LOCATE COMP "JTAG_TDO" SITE "T17";
+IOBUF  PORT "JTAG_TDO" IO_TYPE=LVCMOS33;
+
+###############################################################################
+# Rotary encoder -- PMOD 3, lower row
+#
+# A Digilent Pmod ENC is a 1x6 module seated on PMOD3's lower row, which is
+# PMOD3_4..7; the JTAG pins above occupy the upper row (PMOD3_0..3), so the two
+# do not collide.
+#
+#   pin 1  PMOD3_4  J2   A     quadrature channel A
+#   pin 2  PMOD3_5  N3   B     quadrature channel B
+#   pin 3  PMOD3_6  H4   BTN   push button in the shaft
+#   pin 4  PMOD3_7  R17  SWT   slide switch
+#
+# All four are outputs of the Pmod, so all four are inputs here.
+#
+# PULLMODE=DOWN on all four, even though the module carries its own resistors.
+# The FPGA's internal pull is ~100k and the module's are an order of magnitude
+# stronger, so when the Pmod is attached it wins and these change nothing. What
+# they buy is the disconnected case: an unterminated CMOS input floats around
+# mid-rail and oscillates, and on the quadrature channels that reads as the shaft
+# spinning at megahertz -- thousands of bogus detents a second. Pulled down, a
+# disconnected encoder instead reads as "at rest, nothing pressed", which is
+# quiet and obviously wrong rather than noisily plausible.
+###############################################################################
+
+LOCATE COMP "ENC_A" SITE "J2";
+IOBUF  PORT "ENC_A" IO_TYPE=LVCMOS33;
+IOBUF  PORT "ENC_A" PULLMODE=DOWN;
+
+LOCATE COMP "ENC_B" SITE "N3";
+IOBUF  PORT "ENC_B" IO_TYPE=LVCMOS33;
+IOBUF  PORT "ENC_B" PULLMODE=DOWN;
+
+LOCATE COMP "ENC_BTN" SITE "H4";
+IOBUF  PORT "ENC_BTN" IO_TYPE=LVCMOS33;
+IOBUF  PORT "ENC_BTN" PULLMODE=DOWN;
+
+LOCATE COMP "ENC_SWT" SITE "R17";
+IOBUF  PORT "ENC_SWT" IO_TYPE=LVCMOS33;
+IOBUF  PORT "ENC_SWT" PULLMODE=DOWN;
+
+# TCK is a second, independent clock. Declaring it keeps nextpnr from treating
+# the debug module's registers as unclocked, and stops it trying to relate them
+# to CLK. 24 MHz matches a USB Blaster II / FT232H at its default speed.
+FREQUENCY PORT "JTAG_TCK" 24.0 MHz;
+
+###############################################################################
+# Ethernet -- PMOD 2, https://github.com/swetland/ethernet-pmod (LAN8720A, RMII)
+#
+# PMOD2_0..3 are Pmod pins 1..4 and PMOD2_4..7 are pins 7..10. That mapping was
+# established by driving one ball at a time and watching for the PHY's link to
+# come up, not by reading it off a diagram -- an earlier attempt inferred it from
+# which undriven balls read high, concluded the rows were interleaved and
+# reversed, and cost most of a day. Floating CMOS inputs are indistinguishable
+# from pulled-up ones until you drive them, so do not "correct" this table
+# against anything but a measurement.
+#
+#   pin 1   PMOD2_0  N16  RXD1     PHY -> FPGA
+#   pin 2   PMOD2_1  M18  RXD0     PHY -> FPGA
+#   pin 3   PMOD2_2  C9   CRS_DV   PHY -> FPGA
+#   pin 4   PMOD2_3  C10  TXD0     FPGA -> PHY
+#   pin 7   PMOD2_4  N15  CLKIN    FPGA -> PHY, 50 MHz from the ECP5 PLL
+#   pin 8   PMOD2_5  N17  RSTn     FPGA -> PHY, active low
+#   pin 9   PMOD2_6  B9   TXEN     FPGA -> PHY
+#   pin 10  PMOD2_7  B10  TXD1     FPGA -> PHY
+#
+# PULLMODE=NONE on the three receive lines: they double as the LAN8720A's MODE
+# straps, which the Pmod pulls up with 10k to select auto-negotiation. An
+# internal pull-down would fight those resistors while the strap is being
+# latched and leave the PHY in some other mode.
+###############################################################################
+
+LOCATE COMP "ETH_CLKIN" SITE "N15";
+IOBUF  PORT "ETH_CLKIN" IO_TYPE=LVCMOS33;
+
+LOCATE COMP "ETH_RSTN" SITE "N17";
+IOBUF  PORT "ETH_RSTN" IO_TYPE=LVCMOS33;
+IOBUF  PORT "ETH_RSTN" PULLMODE=DOWN;
+
+LOCATE COMP "ETH_TXEN" SITE "B9";
+IOBUF  PORT "ETH_TXEN" IO_TYPE=LVCMOS33;
+IOBUF  PORT "ETH_TXEN" PULLMODE=DOWN;
+
+LOCATE COMP "ETH_TXD0" SITE "C10";
+IOBUF  PORT "ETH_TXD0" IO_TYPE=LVCMOS33;
+IOBUF  PORT "ETH_TXD0" PULLMODE=DOWN;
+
+LOCATE COMP "ETH_TXD1" SITE "B10";
+IOBUF  PORT "ETH_TXD1" IO_TYPE=LVCMOS33;
+IOBUF  PORT "ETH_TXD1" PULLMODE=DOWN;
+
+LOCATE COMP "ETH_RXD0" SITE "M18";
+IOBUF  PORT "ETH_RXD0" IO_TYPE=LVCMOS33;
+IOBUF  PORT "ETH_RXD0" PULLMODE=NONE;
+
+LOCATE COMP "ETH_RXD1" SITE "N16";
+IOBUF  PORT "ETH_RXD1" IO_TYPE=LVCMOS33;
+IOBUF  PORT "ETH_RXD1" PULLMODE=NONE;
+
+LOCATE COMP "ETH_CRS_DV" SITE "C9";
+IOBUF  PORT "ETH_CRS_DV" IO_TYPE=LVCMOS33;
+IOBUF  PORT "ETH_CRS_DV" PULLMODE=NONE;

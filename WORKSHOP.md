@@ -51,7 +51,7 @@ You do **not** write these — you wire them together:
 | Module | What it gives you |
 |--------|-------------------|
 | [Workshop.Cpu](clash-riscv/src/Workshop/Cpu.hs) | `processingElement` (VexRiscv core + instruction/data memory + interconnect) and its `PeConfig` (`depthI`, `depthD`, `initI`, `initD`). |
-| [Workshop.Peripheral](clash-riscv/src/Workshop/Peripheral.hs) | `serialBytes` — the one external peripheral: a byte-oriented serial port with a single `byte` register. |
+| [Workshop.Peripheral.Serial](clash-riscv/src/Workshop/Peripheral/Serial.hs) | `serialBytes` — the peripheral you start with: a byte-oriented serial port with a single `byte` register. Its siblings under [Workshop/Peripheral/](clash-riscv/src/Workshop/Peripheral/) are the finished design's other devices, one module or subtree each. |
 | [Workshop.Firmware](clash-riscv/src/Workshop/Firmware.hs) | `loadElfMemories` — reads a compiled RISC-V ELF into instruction/data memory images (used in step 6). |
 | [Workshop.MemoryMaps](clash-riscv/src/Workshop/MemoryMaps.hs) | compile-time machinery that emits `memory_maps/*.json` (you register your SoC in step 2). |
 | [Workshop.Utils](clash-riscv/src/Workshop/Utils.hs) | `findParentContaining` — locate the repo root at runtime. |
@@ -94,7 +94,7 @@ from the provided parts:
   the two internal memories always take one each, plus one per external
   peripheral. You have a single serial peripheral, so size it accordingly.
 - **The peripheral.** `serialBytes` from
-  [Workshop.Peripheral](clash-riscv/src/Workshop/Peripheral.hs) is the device to
+  [Workshop.Peripheral.Serial](clash-riscv/src/Workshop/Peripheral/Serial.hs) is the device to
   hang off the external bus; it consumes the serial-in stream together with that
   bus and yields the serial-out stream.
 - **JTAG.** `processingElement` exposes a JTAG debug port, but this SoC has no
@@ -210,6 +210,11 @@ impls straight onto them — no wrapper. Write:
 Nothing here constructs a device or names an address: the methods live on the
 generated type, and the `DeviceInstances` from step 3 is what a program will use to
 get a `SerialBytes` to call them on (step 5).
+
+Where to put it: the finished design keeps hand-written drivers in
+`firmware/hal/src/drivers/`, one module per peripheral, mirroring the Clash modules
+under `Workshop.Peripheral`. Everything under `src/hals/` is generated and gets
+wiped on every regeneration, so nothing you write belongs there.
 
 **Verify:** `cargo build`. *(Peek: `4-write-hal`.)*
 

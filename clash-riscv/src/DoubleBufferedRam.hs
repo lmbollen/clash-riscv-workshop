@@ -34,12 +34,29 @@ data ContentType n a
   = Vec (Vec n a)
   | Blob (MemBlob n (BitSize a))
   | File FilePath
+  | -- | Content already split across the byte lanes of the byte-addressable
+    -- block RAM, in the order 'getRegsBe' produces (most significant byte
+    -- first).
+    --
+    -- 'Vec' is the more natural way to hand over word-wide content, but
+    -- 'blockRamByteAddressable' then has to split it into byte lanes itself,
+    -- and Clash has to constant-fold that split at compile time. For a memory
+    -- of any real size that is ruinous: a 1024-word image sent Clash past
+    -- 25 GB of residency without finishing. Pre-splitting the lanes (see
+    -- 'Workshop.Firmware.loadElfMemoriesTH') avoids that entirely.
+    --
+    -- Note the lanes are 'MemBlob's rather than a nested @ContentType n Byte@:
+    -- the latter would make this type infinitely recursive (every
+    -- @ContentType@ would contain another), which sends Clash into unbounded
+    -- recursion the moment it tries to translate the type.
+    ByteLanes (Vec (Regs a 8) (MemBlob n 8))
 
 instance (Show a, KnownNat n, Typeable a) => Show (ContentType n a) where
   show = \case
     (Vec _) -> "Vec: " <> nAnda
     (Blob _) -> "Blob: " <> nAnda
     (File fp) -> "File: " <> nAnda <> ", filepath = " <> fp
+    (ByteLanes _) -> "ByteLanes: " <> nAnda
    where
     nAnda = "(" <> show (natToNatural @n) <> " of type (" <> show (typeRep $ Proxy @a) <> "))"
 
@@ -62,6 +79,9 @@ initializedRam content rd wr = case content of
   Vec vec -> blockRam vec rd wr
   Blob blob -> bitCoerce <$> blockRamBlob blob rd (bitCoerce <$> wr)
   File fp -> bitCoerce <$> blockRamFile (SNat @n) fp rd (bitCoerce <$> wr)
+  ByteLanes _ ->
+    clashCompileError
+      "initializedRam: ByteLanes content is only for the byte-addressable RAM. "
 
 {- | Wishbone storage element with 'Circuit' interface from "Protocols.Wishbone" that
 allows for word aligned reads and writes.
@@ -81,7 +101,7 @@ wbStorage ::
   Circuit (ToConstBwd Mm, Wishbone dom 'Standard aw nBytes) ()
 wbStorage memoryName SNat initContent =
   circuit $ \wbMm -> do
-    [wb0] <- deviceWbI (deviceConfig memoryName){registered = False} -< wbMm
+    [wb0] <- deviceWbI (deviceConfig memoryName){registered = True} -< wbMm
     reqresp <- addressableBytesWb @depth regConfig -< wb0
     (reads, writes0) <- ReqResp.partitionEithers -< reqresp
     writes1 <- ReqResp.requests <| ReqResp.dropResponse 0 -< writes0
@@ -115,6 +135,8 @@ blockRamByteAddressable initContent readAddr newEntry byteSelect =
   getDataBe @8 . RegisterBank <$> case initContent of
     Blob _ -> clashCompileError "blockRamByteAddressable: Singular MemBlobs are not supported. "
     Vec vecOfA -> go (byteRam . Vec <$> transpose (fmap getBytes vecOfA))
+    -- Already split, so none of the above splitting has to be constant-folded.
+    ByteLanes lanes -> go (byteRam . Blob <$> lanes)
     File _ ->
       clashCompileError
         "blockRamByteAddressable: Singular source files for initial content are not supported. "

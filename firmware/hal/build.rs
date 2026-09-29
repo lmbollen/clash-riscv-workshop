@@ -76,8 +76,19 @@ fn main() {
                     continue;
                 }
                 let dev_mod = snake_case(&device);
+                // Bring in every `clash-bindings` wrapper type, because the
+                // accessors are written in whichever ones this device's register
+                // types map to -- a `Signed 32` register yields `Signed<32, i32>`,
+                // an `Unsigned 8` yields `Unsigned<8, u8>`, and so on. Importing
+                // only `BitVector` (as this used to) makes any device that has no
+                // bit-vector register fail to compile. Most devices will not use
+                // most of these, hence the `allow`.
                 let file = format!(
-                    "{HEADER}use clash_bindings::bitvector::BitVector;\n\n{tokens}\n"
+                    "{HEADER}#[allow(unused_imports)]\n\
+                     use clash_bindings::{{\n\
+                     \x20   bitvector::BitVector, index::Index, mask::Mask, signed::Signed,\n\
+                     \x20   unsigned::Unsigned,\n\
+                     }};\n\n{tokens}\n"
                 );
                 let file_path = target_dir.join(format!("{dev_mod}.rs"));
                 fs::write(&file_path, file).unwrap();

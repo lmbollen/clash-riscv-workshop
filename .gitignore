@@ -65,3 +65,6 @@ target/
 .scala-build
 
 memory_maps
+
+#Clash
+.clash

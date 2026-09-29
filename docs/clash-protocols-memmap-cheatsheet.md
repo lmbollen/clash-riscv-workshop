@@ -120,7 +120,7 @@ busActivityRead  :: Maybe (BusActivity a) -> Maybe a   -- keep only reads
 
 A register reports every access as a `BusActivity`. This peripheral pulls the
 written bytes off the `Df` activity stream (from
-[`Workshop/Peripheral.hs`](../clash-riscv/src/Workshop/Peripheral.hs)):
+[`Workshop/Peripheral/Serial.hs`](../clash-riscv/src/Workshop/Peripheral/Serial.hs)):
 
 ```haskell
 serialBytes = circuit $ \(byteIn0, wb) -> do

@@ -1,4 +1,8 @@
 // @generated from memory_maps/*.json by build.rs — do not edit
+pub mod rotary_encoder;
+pub use rotary_encoder::*;
+pub mod ethernet;
+pub use ethernet::*;
 pub mod serial_bytes;
 pub use serial_bytes::*;
 pub mod devices {

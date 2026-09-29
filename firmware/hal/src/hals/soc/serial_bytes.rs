@@ -1,5 +1,8 @@
 // @generated from memory_maps/*.json by build.rs — do not edit
-use clash_bindings::bitvector::BitVector;
+#[allow(unused_imports)]
+use clash_bindings::{
+    bitvector::BitVector, index::Index, mask::Mask, signed::Signed, unsigned::Unsigned,
+};
 
 pub struct SerialBytes(pub *mut u8);
 impl SerialBytes {

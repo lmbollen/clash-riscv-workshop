@@ -2,6 +2,7 @@ packages:
   clash-riscv/
   clash-cpus/
 
+
 write-ghc-environment-files: always
 
 -- Eliminates the need for `--enable-tests`, which is needed for HLS.
@@ -11,10 +12,16 @@ tests: true
 -- in automatically. Building it requires a JDK, sbt/scala, verilator and make on
 -- PATH (provided by the dev shell) and GHC 9.10 (pinned in flake.nix).
 
+-- The `ethernet-rebased` branch, which carries a full Ethernet stack under
+-- `Clash.Cores.Ethernet` on top of everything `main` has.
+-- Workshop.Peripheral.Ethernet and the stack it hangs off in Workshop.Top are
+-- built out of it. Nothing else in the project notices the change, because the
+-- branch still provides `Clash.Cores.Uart` and `Clash.Cores.Crc` and already
+-- speaks `Protocols.Experimental.Wishbone`.
 source-repository-package
   type: git
   location: https://github.com/clash-lang/clash-cores.git
-  tag: 5d084eff6cdc630ecd14be53bdc4fa30a5a4fd95
+  tag: 01c677c80f56063b344c3bd7e765c8ed6b2b5519
 
 source-repository-package
   type: git

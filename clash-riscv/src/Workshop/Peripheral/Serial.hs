@@ -1,10 +1,27 @@
 {-# LANGUAGE ImplicitParams #-}
 
-module Workshop.Peripheral where
+{- | The SoC's serial port: a one-byte Wishbone device, and the UART that puts it
+on a wire.
+
+Two halves that are deliberately separate. 'serialBytes' is the /peripheral/ -- a
+single register the CPU reads and writes, which appears in the memory map and is
+what the generated PAC and the Rust driver see. 'uartDf' is the /pin interface/ --
+it serialises those bytes onto a transmit line and deserialises a receive line
+back. Nothing about the memory map changes when the UART is added or removed,
+because the UART sits entirely outside the bus.
+
+"Workshop.Soc" instantiates the first and "Workshop.Top" adds the second.
+-}
+module Workshop.Peripheral.Serial (
+  serialBytes,
+  uartDf,
+  unsafeFromDf,
+  unsafeToDf,
+) where
 
 import Clash.Prelude
 
-import Clash.Class.BitPackC (ByteOrder)
+import Clash.Class.BitPackC (ByteOrder (..))
 import Clash.Cores.Uart (ValidBaud, uart)
 
 import Data.Maybe

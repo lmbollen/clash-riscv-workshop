@@ -9,22 +9,23 @@ import Data.Char (chr)
 import Data.Maybe (catMaybes)
 import Protocols
 import Protocols.Experimental.Simulate (SimulationConfig (..), sampleC)
-import Protocols.Idle (idleSource)
+import Protocols.Idle (idleSink, idleSource)
 import System.FilePath ((</>))
 import VexRiscv (DumpVcd (NoDumpVcd))
 
 import qualified Protocols.MemoryMap as Mm
 
-import Workshop.Cpu (PeConfig (..), processingElement)
+import Workshop.Cpu (PeConfig (..))
 import Workshop.Firmware (loadElfMemories)
-import Workshop.Peripheral (serialBytes)
+import Workshop.Peripheral.Encoder (idleEncoderPins)
+import Workshop.Soc (socC)
 import Workshop.Utils (findParentContaining)
 
 -- | The device under test: the SoC, with no external serial input, exposing the
 -- SerialBytes output stream. (Same wiring as 'Workshop.Soc.soc', but with the
 -- firmware loaded into the CPU's memories.)
 dut ::
-  PeConfig 3 ->
+  PeConfig 5 ->
   Circuit (ToConstBwd Mm.Mm, ()) (Df System (BitVector 8))
 dut peConfig =
   let ?byteOrder = LittleEndian
@@ -33,8 +34,12 @@ dut peConfig =
         $ \(mm, _noInput) -> do
           jtag <- idleSource -< ()
           serialIn <- idleSource -< ()
-          [serialBus] <- processingElement NoDumpVcd peConfig -< (mm, jtag)
-          serialOut <- serialBytes -< (serialIn, serialBus)
+          -- No Ethernet in simulation: the stack that would drive it lives in
+          -- Workshop.Top, alongside the pins.
+          udpIn <- idleSource -< ()
+          (serialOut, udpOut, _ethCfg) <-
+            socC NoDumpVcd peConfig (pure idleEncoderPins) -< (mm, (jtag, serialIn, udpIn))
+          idleSink -< udpOut
           idC -< serialOut
 
 main :: IO ()
@@ -48,9 +53,10 @@ main = do
           </> "release"
           </> "hello-world"
 
-  (iMem, dMem) <- loadElfMemories @1024 @1024 elfPath
+  (iMem, dMem) <- loadElfMemories @2048 @2048 elfPath
 
-  let peConfig = PeConfig (SNat @1024) (SNat @1024) (Just iMem) (Just dMem)
+  let peConfig :: PeConfig 5
+      peConfig = PeConfig (SNat @2048) (SNat @2048) (Just iMem) (Just dMem)
       simConfig = def{timeoutAfter = 1_000_000}
       output = catMaybes (sampleC simConfig (Mm.unMemmap (dut peConfig)))
       captured = fmap toChar output
