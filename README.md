@@ -1,5 +1,23 @@
 # clash-riscv-workshop
 
+# Preparation
+**Please follow these instructions before joining the workshop Oct 7!** We will have Internet
+access during the workshop, but not enough bandwidth to handle 20 Nix cache pulls
+simultaneously.
+
+1. [Install Nix](https://nixos.org/download/)
+2. Add the following line to `~/.config/nix/nix.conf`: `experimental-features = nix-command flakes`. If the file/directory does not exist, create it.
+3. Make sure you have about 10 GB of free disk space.
+4. Run the following commands:
+
+```console
+git clone https://github.com/lmbollen/clash-riscv-workshop.git
+cd clash-riscv-workshop
+nix develop
+```
+
+# Introduction
+
 A hands-on workshop for building a minimal **RISC-V System-on-Chip (SoC)** in
 [Clash](https://clash-lang.org) (Haskell-to-hardware) together with the **Rust
 firmware** that runs on it. It is small on purpose: the goal is to see every
